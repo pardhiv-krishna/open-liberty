@@ -10,11 +10,8 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
-// Always pull from Maven Central so we don't have to upload transitive dependencies to artifactory
+// Always pull from mirror so we don't have to upload transitive dependencies to artifactory
 apply from: '../wlp-gradle/subprojects/maven-central-mirror.gradle'
-
-//Enable the parameters compiler argument
-//apply plugin: 'java'
 
 ext {
   hibernateVersion = '7.0.9.Final'
@@ -35,17 +32,17 @@ dependencies {
   requiredLibs project(":com.ibm.ws.jpa.tests.beanvalidation_fat.common")
   requiredLibs project(":com.ibm.ws.jpa.tests.beanvalidation_3.2_fat.common")
 
-  
-  hibernateJPA32 "org.hibernate.orm:hibernate-community-dialects:${hibernateVersion}"I
-  hibernateJPA32 "org.hibernate.orm:hibernate-scan-jandex:${hibernateVersion}"
-  
-  //derby16 "org.apache.derby:derby:10.16.1.1",
-  //        "org.apache.derby:derbytools:10.16.1.1"
-
-  //Annotation processor - generates .java files in build/libs/generated/sources
-  //Some generated .java files import hibernate dependencies, need this compileOnly dependency
-  c "org.hibernate.orm:hibernate-processor:${hibernateVersion}"
-  compileOnly "org.hibernate.orm:hibernate-core:${hibernateVersion}"
+  def withoutJakartaAPI = {
+      exclude group: 'jakarta.activation', module: 'jakarta.activation-api'
+      exclude group: 'jakarta.inject', module: 'jakarta.inject-api'
+      exclude group: 'jakarta.persistence', module: 'jakarta.persistence-api'
+      exclude group: 'jakarta.transaction', module: 'jakarta.transaction-api'
+      exclude group: 'jakarta.xml.bind', module: 'jakarta.xml.bind-api'
+  }
+    
+  hibernateJPA32 "org.hibernate.orm:hibernate-core:${hibernateVersion}", withoutJakartaAPI
+  hibernateJPA32 "org.hibernate.orm:hibernate-community-dialects:${hibernateVersion}", withoutJakartaAPI
+  hibernateJPA32 "org.hibernate.orm:hibernate-scan-jandex:${hibernateVersion}", withoutJakartaAPI
 }
 
 task addJPAFATTools (type: Copy) {
