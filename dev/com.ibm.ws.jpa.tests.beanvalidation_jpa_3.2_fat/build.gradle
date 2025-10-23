@@ -10,9 +10,18 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
+// Always pull from Maven Central so we don't have to upload transitive dependencies to artifactory
+apply from: '../wlp-gradle/subprojects/maven-central-mirror.gradle'
+
+//Enable the parameters compiler argument
+//apply plugin: 'java'
+
+ext {
+  hibernateVersion = '7.0.9.Final'
+}
 
 configurations {
-  hibernateJPA31
+  hibernateJPA32
   jpaFatTools {
     transitive = false
   }
@@ -26,13 +35,17 @@ dependencies {
   requiredLibs project(":com.ibm.ws.jpa.tests.beanvalidation_fat.common")
   requiredLibs project(":com.ibm.ws.jpa.tests.beanvalidation_3.2_fat.common")
 
-  hibernateJPA31 'com.fasterxml:classmate:1.5.1'
-  hibernateJPA31 'net.bytebuddy:byte-buddy:1.12.8'
-  hibernateJPA31 'org.antlr:antlr4-runtime:4.9.1'
-  hibernateJPA31 'org.hibernate.common:hibernate-commons-annotations:6.0.0.Final'
-  hibernateJPA31 'org.hibernate.orm:hibernate-core:6.0.0.Final'
-  hibernateJPA31 'org.jboss:jandex:2.4.2.Final'
-  hibernateJPA31 'org.jboss.logging:jboss-logging:3.4.3.Final'
+  
+  hibernateJPA32 "org.hibernate.orm:hibernate-community-dialects:${hibernateVersion}"I
+  hibernateJPA32 "org.hibernate.orm:hibernate-scan-jandex:${hibernateVersion}"
+  
+  //derby16 "org.apache.derby:derby:10.16.1.1",
+  //        "org.apache.derby:derbytools:10.16.1.1"
+
+  //Annotation processor - generates .java files in build/libs/generated/sources
+  //Some generated .java files import hibernate dependencies, need this compileOnly dependency
+  c "org.hibernate.orm:hibernate-processor:${hibernateVersion}"
+  compileOnly "org.hibernate.orm:hibernate-core:${hibernateVersion}"
 }
 
 task addJPAFATTools (type: Copy) {
@@ -42,10 +55,10 @@ task addJPAFATTools (type: Copy) {
   into new File(autoFvtDir, 'lib')
 }
 
-task addhibernateJPA31(type: Copy) {
+task addhibernateJPA32(type: Copy) {
   shouldRunAfter jar
-  from configurations.hibernateJPA31
-  into new File(autoFvtDir, 'publish/shared/resources/jpa_beanvalidation_fat_jpa31_hibernate')
+  from configurations.hibernateJPA32
+  into new File(autoFvtDir, 'publish/shared/resources/jpa_beanvalidation_fat_jpa32_hibernate')
 }
 
 task copyFAT {
@@ -105,7 +118,7 @@ task copyCommonFiles {
 
 addRequiredLibraries {
   dependsOn copyJdbcDrivers
-  dependsOn addhibernateJPA31
+  dependsOn addhibernateJPA32
   dependsOn addJakartaTransformer
   dependsOn addJPAFATTools
   dependsOn copyFAT
