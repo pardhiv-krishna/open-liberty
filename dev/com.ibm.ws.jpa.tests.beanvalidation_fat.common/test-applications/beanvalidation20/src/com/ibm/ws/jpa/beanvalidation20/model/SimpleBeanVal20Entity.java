@@ -46,4 +46,12 @@ public class SimpleBeanVal20Entity {
     public void setFutureInstant(java.time.Instant futureInstant) {
         this.futureInstant = futureInstant;
     }
+    
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
+    }
 }
