@@ -55,6 +55,8 @@ public class JakartaPersistenceDataRecreateTest {
     public static void setUp() throws Exception {
         PrivHelper.generateCustomPolicy(server, PrivHelper.JAXB_PERMISSION);
 
+        server.addEnvVar("repeat_phase", AbstractFATSuite.repeatPhase);
+        
         //Get driver name
         server.addEnvVar("DB_DRIVER", DatabaseContainerType.valueOf(testContainer).getDriverName());
 

@@ -63,6 +63,8 @@ public class JPABootstrapTest extends FATServletClient {
     public static void setUp() throws Exception {
         PrivHelper.generateCustomPolicy(server1, PrivHelper.JAXB_PERMISSION);
 
+        server1.addEnvVar("repeat_phase", AbstractFATSuite.repeatPhase);
+        
         //Get driver name
         server1.addEnvVar("DB_DRIVER", DatabaseContainerType.valueOf(testContainer).getDriverName());
 

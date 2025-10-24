@@ -38,7 +38,8 @@ import componenttest.rules.repeater.RepeatTests;
 public class FATSuite extends AbstractFATSuite {
 
     @ClassRule
-    public static RepeatTests r = RepeatTests.withoutModification()
+    public static RepeatTests r = RepeatTests
+                    .with(new RepeatWithJPA32())
                     .andWith(new RepeatWithJPA32Hibernate());
 
 }
