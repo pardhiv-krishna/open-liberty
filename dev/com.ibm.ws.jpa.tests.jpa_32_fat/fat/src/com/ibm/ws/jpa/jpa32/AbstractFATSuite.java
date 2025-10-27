@@ -31,7 +31,7 @@ public class AbstractFATSuite extends TestContainerSuite {
     @ClassRule
     public static JdbcDatabaseContainer<?> testContainer = DatabaseContainerFactory.create();
 
-    public static String repeatPhase = "";
+    public static String repeatPhase = "hibernate";
 
     public static JPAPersistenceProvider provider = JPAPersistenceProvider.DEFAULT;
 }

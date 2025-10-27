@@ -9,6 +9,8 @@
  *******************************************************************************/
 package com.ibm.ws.jpa.jpa32;
 
+import java.util.HashSet;
+
 import org.jboss.shrinkwrap.api.Filters;
 import org.jboss.shrinkwrap.api.GenericArchive;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
@@ -84,7 +86,7 @@ public class JakartaDataRecreateTest {
         ShrinkHelper.exportToServer(server, "apps", app);
         
         Application appRecord = new Application();
-        appRecord.setLocation(APP_NAME + ".war");
+        appRecord.setLocation(APP_NAME + "_" + specLevel + ".war");
         appRecord.setName(APP_NAME);
 
         // setup the thirdparty classloader for Hibernate
@@ -94,6 +96,11 @@ public class JakartaDataRecreateTest {
             loader.getCommonLibraryRefs().add("HibernateLib");
             cel.add(loader);
         }
+        
+        ServerConfiguration sc = server.getServerConfiguration();
+        sc.getApplications().add(appRecord);
+        server.updateServerConfiguration(sc);
+        server.saveServerConfiguration();
 
     }
 
