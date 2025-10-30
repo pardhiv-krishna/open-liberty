@@ -25,6 +25,7 @@ public class RepeatWithJPA32Hibernate extends JakartaEE11Action {
      * Restrict Hibernate tests to run on FULL mode
      */
     public RepeatWithJPA32Hibernate() {
+        withID(ID);
         // Used in componenttest.rules.repeater.RepeatTestAction.isEnabled() to determine if the test should run
         withTestMode(TestMode.FULL);
     }

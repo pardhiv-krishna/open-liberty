@@ -25,6 +25,7 @@ public class RepeatWithJPA32 extends JakartaEE11Action {
      * Allow the default repeat action to run on LITE mode
      */
     public RepeatWithJPA32() {
+        withID(ID);
         // Used in componenttest.rules.repeater.RepeatTestAction.isEnabled() to determine if the test should run
         withTestMode(TestMode.LITE);
     }

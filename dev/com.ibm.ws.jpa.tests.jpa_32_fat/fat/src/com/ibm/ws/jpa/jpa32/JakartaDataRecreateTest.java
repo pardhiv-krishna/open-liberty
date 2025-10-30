@@ -83,11 +83,11 @@ public class JakartaDataRecreateTest {
         app.merge(ShrinkWrap.create(GenericArchive.class).as(ExplodedImporter.class).importDirectory(resPath).as(GenericArchive.class),
                   "/",
                   Filters.includeAll());
-        ShrinkHelper.exportToServer(server, "apps", app);
+        ShrinkHelper.exportAppToServer(server, app);
         
         Application appRecord = new Application();
         appRecord.setLocation(APP_NAME + "_" + specLevel + ".war");
-        appRecord.setName(APP_NAME);
+        appRecord.setName(APP_NAME + "_" + specLevel);
 
         // setup the thirdparty classloader for Hibernate
         if (AbstractFATSuite.repeatPhase != null && AbstractFATSuite.repeatPhase.contains("hibernate")) {
