@@ -23,6 +23,7 @@ import com.ibm.ws.jpa.jpa32.JPABootstrapTest;
 import com.ibm.ws.jpa.jpa32.JakartaDataRecreateTest;
 import com.ibm.ws.jpa.jpa32.JakartaPersistenceDataRecreateTest;
 import com.ibm.ws.jpa.jpa32.JakartaPersistenceTest;
+import com.ibm.ws.jpa.jpa32.JPACDIIntegrationTest;
 
 import componenttest.rules.repeater.RepeatTests;
 
@@ -32,6 +33,7 @@ import componenttest.rules.repeater.RepeatTests;
                 JakartaDataRecreateTest.class,
                 JakartaPersistenceTest.class,
                 JakartaPersistenceDataRecreateTest.class,
+                JPACDIIntegrationTest.class,
                 componenttest.custom.junit.runner.AlwaysPassesTest.class
 })
 

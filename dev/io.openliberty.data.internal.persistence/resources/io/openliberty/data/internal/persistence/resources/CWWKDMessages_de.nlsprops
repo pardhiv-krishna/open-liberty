@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2022,2025 IBM Corporation and others.
+# Copyright (c) 2022,2026 IBM Corporation and others.
 # All rights reserved. This program and the accompanying materials
 # are made available under the terms of the Eclipse Public License 2.0
 # which accompanies this distribution, and is available at
@@ -46,7 +46,7 @@ CWWKD1004.general.rtrn.err=CWWKD1004E: Der {0} R\u00fcckgabetyp der {1} Methode 
 CWWKD1004.general.rtrn.err.explanation=Der R\u00fcckgabetyp der Methode geh\u00f6rt nicht zu den unterst\u00fctzten R\u00fcckgabetypen f\u00fcr den Typ der Repository-Methode.
 CWWKD1004.general.rtrn.err.useraction=Eine Liste der g\u00fcltigen R\u00fcckgabetypen f\u00fcr den Typ der Repository-Methode finden Sie in der Javadoc-Information zu Jakarta Data.
 
-CWWKD1005.find.rtrn.err=CWWKD1005E: Die {0} -Methode der {1} -Repository-Schnittstelle ist ung\u00fcltig. Die Methode gibt einen R\u00fcckgabetyp {2} an, der nicht vom Entit\u00e4tstyp {3} konvertierbar ist. Der Ergebnistyp einer Suchoperation muss der Entit\u00e4tstyp, ein Typ eines Entit\u00e4tsattributs, ein Java-Datensatz, der aus Entit\u00e4tsattributen besteht, oder ein Typ sein, der durch die Abfrage erstellt wurde, die der Abfrageanmerkung bereitgestellt wird. Der R\u00fcckgabetyp der Repository-Suchmethode kann der Ergebnistyp, ein Array des Ergebnistyps oder einer der folgenden Typen sein, die mit dem Ergebnistyp parametrisiert sind: {4}.
+CWWKD1005.find.rtrn.err=CWWKD1005E: Die Methode \u201e {0} \u201c der Schnittstelle \u201e {1} \u201c ist ung\u00fcltig. Die Methode gibt einen R\u00fcckgabetyp \u201e {2} \u201c an, der nicht aus dem Entit\u00e4tstyp \u201e {3} \u201c konvertierbar ist. Der Ergebnistyp einer Suchoperation muss der Entit\u00e4tstyp, ein durch die Select-Annotation ausgew\u00e4hlter Typ eines Entit\u00e4tsattributs, ein Java-Datensatz, der aus Entit\u00e4tsattributen besteht, oder ein durch die an die Query-Annotation \u00fcbergebene Abfrage ausgew\u00e4hlter Typ sein. Der R\u00fcckgabetyp der Repository-Find-Methode kann der Ergebnistyp, ein Array des Ergebnistyps oder einer der folgenden Typen sein, die mit dem Ergebnistyp parametrisiert sind: {4}.
 CWWKD1005.find.rtrn.err.explanation=Der R\u00fcckgabetyp der Methode geh\u00f6rt nicht zu den unterst\u00fctzten R\u00fcckgabetypen f\u00fcr Repository-Findmethoden.
 CWWKD1005.find.rtrn.err.useraction=Eine Liste der g\u00fcltigen R\u00fcckgabetypen f\u00fcr Repository-Suchmethoden finden Sie in der Javadoc-Information zu Jakarta Data.
 
@@ -507,3 +507,19 @@ CWWKD1117.anno.constraint.conflict.useraction=Entfernen Sie die kollidierende An
 CWWKD1118.param.anno.conflict=CWWKD1118E: Der Parameter {0} der Methode {1} der Repository-Schnittstelle {2} kann nicht mit den folgenden Anmerkungen versehen werden: {3}. Zwei oder mehr Anmerkungen stehen im Widerspruch zueinander.
 CWWKD1118.param.anno.conflict.explanation=Die Kombination von Parametervermerken ist nicht g\u00fcltig.
 CWWKD1118.param.anno.conflict.useraction=Entfernen Sie eine oder mehrere der widerspr\u00fcchlichen Anmerkungen aus dem Parameter der Repository-Methode.
+
+CWWKD1119.keyword.prevents.count=CWWKD1119E: Die Methode {0} der Repository-Schnittstelle {1} ruft Seiten ab, die keine Gesamtzahl von Elementen und Seiten enthalten, weil die Abfrage das Schl\u00fcsselwort {2} enth\u00e4lt. Die vollst\u00e4ndige Abfrage lautet: {3}.
+CWWKD1119.keyword.prevents.count.explanation=Das Schl\u00fcsselwort ist unvereinbar mit der M\u00f6glichkeit, eine Gesamtzahl von Elementen und Seiten zu erhalten.
+CWWKD1119.keyword.prevents.count.useraction=Ersetzen Sie die Abfrage durch eine, die das Schl\u00fcsselwort nicht verwendet, oder vermeiden Sie die Abfrage einer Gesamtzahl von Elementen und Seiten.
+
+CWWKD1120.cursor.keyword.mismatch=CWWKD1120E: Die Methode {0} der Repository-Schnittstelle {1} gibt eine Abfrage an, die das Schl\u00fcsselwort {2} enth\u00e4lt, das mit der cursorbasierten Paginierung nicht kompatibel ist. Abfragen f\u00fcr die cursorbasierte Paginierung m\u00fcssen mit einer WHERE-Klausel enden und d\u00fcrfen keine Unterabfragen enthalten. Die Abfrage lautet: {3}.
+CWWKD1120.cursor.keyword.mismatch.explanation=Schl\u00fcsselw\u00f6rter wie GROUP BY, HAVING, ORDER BY, EXCEPT, INTERSECT und UNION sind nicht mit der cursorbasierten Paginierung kompatibel.
+CWWKD1120.cursor.keyword.mismatch.useraction=Schreiben Sie die Abfrage so um, dass sie nur die Klauseln enth\u00e4lt: SELECT, FROM und WHERE.
+
+CWWKD1121.record.lacks.id=CWWKD1121E: Der Datensatz \u201e {0} \u201d kann nicht als Entit\u00e4t verwendet werden, da ihm eine eindeutige Kennung fehlt. Eine der Datensatzkomponenten ( {1} ) muss den Namen \u201eid\u201c tragen, einen Namen haben, der auf \u201e_id\u201c, \u201eId\u201c oder \u201eID\u201c endet, oder vom Typ \u201e java.util.UUID \u201c sein.
+CWWKD1121.record.lacks.id.explanation=Entit\u00e4ten m\u00fcssen \u00fcber ein eindeutiges Identifikationsattribut verf\u00fcgen.
+CWWKD1121.record.lacks.id.useraction=F\u00fcgen Sie eine Datensatzkomponente hinzu oder benennen Sie sie um, um eine der angegebenen Konventionen f\u00fcr die Zuweisung einer eindeutigen Kennung zu befolgen.
+
+CWWKD1122.entity.lacks.id=CWWKD1122E: Die Klasse \u201e {0} \u201c kann nicht als Entit\u00e4t verwendet werden, da ihr eine eindeutige Kennung fehlt. Um eine eindeutige Kennung zuzuweisen, stellen Sie sicher, dass die Funktion \u201e {1} \u201d aktiviert ist, f\u00fcgen Sie die Anmerkung \u201e@ jakarta.persistence.Entity \u201d zur Entit\u00e4tsklasse hinzu und f\u00fcgen Sie die Anmerkung \u201e@ jakarta.persistence.Id \u201d zu h\u00f6chstens einem Feld oder einer Getter-Methode der Entit\u00e4tsklasse hinzu. Alternativ k\u00f6nnen Sie eine Datei \u201e META-INF/orm.xml \u201c verwenden, um die Entit\u00e4t und ihre eindeutige Kennung zu definieren.
+CWWKD1122.entity.lacks.id.explanation=Entit\u00e4ten m\u00fcssen \u00fcber ein eindeutiges Identifikationsattribut verf\u00fcgen.
+CWWKD1122.entity.lacks.id.useraction=Aktivieren Sie die Jakarta Persistence-Funktion und befolgen Sie das Jakarta Persistence-Entit\u00e4tsmodell, um eine eindeutige Kennung zuzuweisen.

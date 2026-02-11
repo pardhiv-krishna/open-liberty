@@ -9,18 +9,38 @@
  *******************************************************************************/
 package io.openliberty.mcp.internal.fat.tool.basicToolApp;
 
+import java.math.BigDecimal;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
+import io.openliberty.mcp.annotations.Schema;
 import io.openliberty.mcp.annotations.Tool;
 import io.openliberty.mcp.annotations.Tool.Annotations;
 import io.openliberty.mcp.annotations.ToolArg;
 import io.openliberty.mcp.content.AudioContent;
 import io.openliberty.mcp.content.Content;
 import io.openliberty.mcp.content.ImageContent;
+import io.openliberty.mcp.content.Role;
 import io.openliberty.mcp.content.TextContent;
+import io.openliberty.mcp.meta.Meta;
+import io.openliberty.mcp.meta.MetaKey;
+import io.openliberty.mcp.request.RequestId;
 import io.openliberty.mcp.tools.ToolResponse;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.Dependent;
+import jakarta.json.Json;
+import jakarta.json.JsonObject;
+import jakarta.json.bind.Jsonb;
+import jakarta.json.bind.JsonbBuilder;
+import jakarta.json.bind.adapter.JsonbAdapter;
+import jakarta.json.bind.annotation.JsonbProperty;
+import jakarta.json.bind.annotation.JsonbTransient;
+import jakarta.json.bind.annotation.JsonbTypeAdapter;
 
 /**
  *
@@ -51,13 +71,11 @@ public class BasicTools {
 
         ImageContent image = new ImageContent(
                                               "base64-encoded-image",
-                                              "image/png",
-                                              null);
+                                              "image/png");
 
         AudioContent audio = new AudioContent(
                                               "base64-encoded-audio",
-                                              "audio/mpeg",
-                                              null);
+                                              "audio/mpeg");
 
         return ToolResponse.success(List.of(text, image, audio));
 
@@ -70,37 +88,65 @@ public class BasicTools {
 
                        new ImageContent(
                                         "base64-encoded-image",
-                                        "image/png",
-                                        null),
+                                        "image/png"),
 
                        new AudioContent(
                                         "base64-encoded-audio",
-                                        "audio/mpeg",
-                                        null));
+                                        "audio/mpeg"));
     }
 
     @Tool(name = "textContentTool", title = "Text Content Tool", description = "Returns text content object")
-    public TextContent textContentTool(
-                                       @ToolArg(name = "input", description = "input string to echo back as content") String input) {
+    public TextContent textContentTool(@ToolArg(name = "input", description = "input string to echo back as content") String input) {
         return new TextContent("Echo: " + input);
     }
 
+    @Tool(name = "textContentToolWithContentAnnotation", title = "Text Content Tool With Content Annotation", description = "Returns text content object with annotation")
+    public TextContent textContentToolWithContentAnnotation(@ToolArg(name = "input", description = "input string to echo back as content") String input) {
+        Content.Annotations annotations = new Content.Annotations(Role.ASSISTANT,
+                                                                  ZonedDateTime.of(2025, 8, 26, 8, 40, 0, 0, ZoneOffset.UTC)
+                                                                               .format(DateTimeFormatter.ISO_INSTANT),
+                                                                  0.5);
+        return new TextContent("Echo: " + input, null, annotations);
+    }
+
     @Tool(name = "imageContentTool", title = "Image Content Tool", description = "Returns image content object")
-    public ImageContent imageContentTool(
-                                         @ToolArg(name = "imageData", description = "Base64-encoded image") String imageData) {
+    public ImageContent imageContentTool(@ToolArg(name = "imageData", description = "Base64-encoded image") String imageData) {
+        return new ImageContent(
+                                imageData,
+                                "image/png");
+    }
+
+    @Tool(name = "imageContentToolWithContentAnnotation", title = "Image Content Tool With Content Annotation", description = "Returns image content object with annotation")
+    public ImageContent imageContentToolWithContentAnnotation(@ToolArg(name = "imageData", description = "Base64-encoded image") String imageData) {
+        Content.Annotations annotations = new Content.Annotations(Role.USER,
+                                                                  ZonedDateTime.of(2025, 8, 26, 8, 40, 0, 0, ZoneOffset.UTC)
+                                                                               .format(DateTimeFormatter.ISO_INSTANT),
+                                                                  0.8);
         return new ImageContent(
                                 imageData,
                                 "image/png",
-                                null);
+                                null,
+                                annotations);
     }
 
     @Tool(name = "audioContentTool", title = "Audio Content Tool", description = "Returns audio content object")
-    public AudioContent audioContentTool(
-                                         @ToolArg(name = "audioData", description = "Base64-encoded audio") String audioData) {
+    public AudioContent audioContentTool(@ToolArg(name = "audioData", description = "Base64-encoded audio") String audioData) {
+        return new AudioContent(
+                                audioData,
+                                "audio/mpeg");
+    }
+
+    @Tool(name = "audioContentToolWithContentAnnotation", title = "Audio Content Tool With Content Annotation", description = "Returns audio content object with annotation")
+    public AudioContent audioContentToolWithContentAnnotation(@ToolArg(name = "audioData", description = "Base64-encoded audio") String audioData) {
+        Content.Annotations annotations = new Content.Annotations(Role.ASSISTANT,
+                                                                  ZonedDateTime.of(2025, 8, 26, 8, 40, 0, 0, ZoneOffset.UTC)
+                                                                               .format(DateTimeFormatter.ISO_INSTANT),
+                                                                  0.3);
         return new AudioContent(
                                 audioData,
                                 "audio/mpeg",
-                                null);
+                                null,
+                                annotations);
     }
 
     //tool name is not present -> use method name
@@ -130,6 +176,11 @@ public class BasicTools {
             throw new RuntimeException("Method call caused runtime exception");
         }
         return input;
+    }
+
+    @Tool(name = "echoRequestId", title = "Echo RequestId", description = "Returns the incoming request ID")
+    public String echoRequestId(RequestId id, @ToolArg(name = "input") String input) {
+        return id.toString() + ": " + input;
     }
 
     @Tool(name = "privateEcho", title = "Echoes the input", description = "Returns the input unchanged")
@@ -309,6 +360,48 @@ public class BasicTools {
         return false;
     }
 
+    @Tool(name = "testToolArgStringNotRequired", title = "ToolArgStringNotRequired", description = "ToolArgNotRequired")
+    public String testToolArgStringNotRequired(@ToolArg(name = "value", description = "String value", required = false) String value) {
+        return value;
+    }
+
+    @Tool(name = "testToolArgIntNotRequired", title = "ToolArgIntNotRequired", description = "ToolArgNotRequired")
+    public int testToolArgIntNotRequired(@ToolArg(name = "value", description = "int value", required = false) int value) {
+        return value;
+    }
+
+    @Tool(name = "testToolArgArrayNotRequired", title = "ToolArgArrayNotRequired", description = "ToolArgNotRequired")
+    public int[] testToolArgArrayNotRequired(@ToolArg(name = "value", description = "Array of ints", required = false) int[] value) {
+        return value;
+    }
+
+    @Tool(name = "testMultipleToolArgsOneNotRequired", title = "testMultipleToolArgsOneNotRequired", description = "MultipleToolArgsOneNotRequired")
+    public String testMultipleToolArgsOneNotRequired(@ToolArg(name = "planet", description = "planet you live in") String planet,
+                                                     @ToolArg(name = "year", description = "current year", required = false) int year) {
+        return "Planet " + planet + " was created in the year " + year;
+    }
+
+    @Tool(name = "testToolArgObjectNotRequired", title = "ToolArgObjectNotRequired", description = "ToolArgNotRequired")
+    public City testToolArgObjectNotRequired(@ToolArg(name = "value", description = "City object value", required = false) City value) {
+        return value;
+    }
+
+    @Tool(name = "testToolArgStringDefaultValue", title = "ToolArg String Default Value", description = "Test tool defaults to default value when argument not provided")
+    public String testToolArgStringDefaultValue(@ToolArg(name = "planet", description = "planet you live in", required = false, defaultValue = "Jupiter") String planet) {
+        return planet;
+    }
+
+    @Tool(name = "testToolArgIntDefaultValue", title = "ToolArg Int Default Value", description = "Test tool defaults to default value when argument not provided")
+    public int testToolArgIntDefaultValue(@ToolArg(name = "year", description = "current year", required = false, defaultValue = "2025") int year) {
+        return year;
+    }
+
+    @Tool(name = "testMultipleToolArgsOneDefaultValue", title = "testMultipleToolArgsOneDefaultValue", description = "MultipleToolArgsOneDefaultValue")
+    public String testMultipleToolArgsOneDefaultValue(@ToolArg(name = "planet", description = "planet you live in", required = false, defaultValue = "Jupiter") String planet,
+                                                      @ToolArg(name = "year", description = "current year") int year) {
+        return "Planet " + planet + " was created in the year " + year;
+    }
+
     /////////////////////////////////////////////
     // Special characters in Tool and  parameters
 
@@ -348,4 +441,126 @@ public class BasicTools {
                                                     @ToolArg(name = "void", description = "reservedNamesInToolArgName") String arg2) {
         return arg1;
     }
+
+    // Complex Schema
+
+    @Schema(description = "A person object contains address, company objects")
+    public static record Person(@JsonbProperty("fullname") String name, Address address, Company company) {};
+
+    public static record Address(int number, @Schema(description = "A street object to represent complex streets") Street street, String postcode,
+                                 @JsonbTransient String directions) {};
+
+    @JsonbTypeAdapter(StreetAdapter.class)
+    @Schema("{\"properties\": {  \"streetName\": { \"type\": \"string\" }, \"roadType\": { \"type\": \"string\" } }, \"required\": [ \"streetName\" ], \"type\": \"object\"}")
+    public static record Street(String streetname, String roadtype) {}
+
+    public static record Company(String name, Address address, @Schema(description = "A list of shareholder (person object)") List<Person> shareholders,
+                                 @Schema(value = "{\"properties\": {\"key\":{ \"type\": \"integer\" }, \"value\":{ \"$ref\": \"#/$defs/person\" }},\"required\": [ ], \"type\": \"object\"}") Optional<Map<String, Person>> shareholderRegistry) {};
+
+    public static class StreetAdapter implements JsonbAdapter<Street, JsonObject> {
+
+        /** {@inheritDoc} */
+        @Override
+        public Street adaptFromJson(JsonObject arg0) throws Exception {
+            return new Street(arg0.getString("streetName"), arg0.getString("roadType"));
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public JsonObject adaptToJson(Street arg0) throws Exception {
+            return Json.createObjectBuilder().add("streetName", arg0.streetname()).add("roadType", arg0.roadtype()).build();
+        }
+    }
+
+    public static interface NumberRestrictor {
+        public Number getMax();
+
+        public Number getMin();
+
+        public void setMax(Number number);
+
+        public void setMin(Number number);
+    }
+
+    @Tool(name = "checkPerson", title = "checks if person is shareholder", description = "Returns boolean", structuredContent = false)
+    public boolean checkPerson(@ToolArg(name = "person", description = "Person object") Person person, @ToolArg(name = "company", description = "Company object") Company company) {
+        return true;
+    }
+
+    @Tool(name = "addPersonToList", title = "adds person to people list", description = "adds person to people list", structuredContent = true)
+    @Schema(description = "Returns list of person object")
+    public List<Person> addPersonToList(
+                                        @ToolArg(name = "employeeList", description = "List of people") List<Person> employeeList,
+                                        @ToolArg(name = "person", description = "Person object") Optional<Person> person) {
+        employeeList.add(person.get());
+        return employeeList;
+    }
+
+    @Tool(name = "addPersonToListToolResponse", title = "adds person to people list", description = "adds person to people list", structuredContent = true)
+    public @Schema(value = "{ \"$defs\": { \"Address\": { \"type\": \"object\", \"properties\": { \"number\": { \"type\": \"integer\" }, \"street\": { \"description\": \"A street object to represent complex streets\", \"type\": \"object\", \"properties\": { \"streetName\": { \"type\": \"string\" }, \"roadType\": { \"type\": \"string\" } }, \"required\": [ \"streetName\" ] }, \"postcode\": { \"type\": \"string\" } }, \"required\": [ \"number\", \"street\", \"postcode\" ] }, \"Person\": { \"description\": \"A person object contains address, company objects\", \"type\": \"object\", \"properties\": { \"address\": { \"$ref\": \"#/$defs/Address\" }, \"company\": { \"type\": \"object\", \"properties\": { \"address\": { \"$ref\": \"#/$defs/Address\" }, \"name\": { \"type\": \"string\" }, \"shareholders\": { \"description\": \"A list of shareholder (person object)\", \"type\": \"array\", \"items\": { \"$ref\": \"#/$defs/Person\" } }, \"shareholderRegistry\": { \"type\": \"object\", \"properties\": { \"value\": { \"$ref\": \"#/$defs/person\" }, \"key\": { \"type\": \"integer\" } }, \"required\": [] } }, \"required\": [ \"name\", \"address\", \"shareholders\" ] }, \"fullname\": { \"type\": \"string\" } }, \"required\": [ \"fullname\", \"address\", \"company\" ] } }, \"type\": \"array\", \"items\": { \"$ref\": \"#/$defs/Person\" }, \"description\": \"Returns list of person object\" }",
+                   description = "Returns list of person object") ToolResponse addPersonToListToolResponse(@ToolArg(name = "employeeList",
+                                                                                                                    description = "List of people") List<Person> employeeList,
+                                                                                                           @ToolArg(name = "person",
+                                                                                                                    description = "Person object") Optional<Person> person) {
+        Person personInstance = person.get();
+        employeeList.add(personInstance);
+        Jsonb jsonb = JsonbBuilder.create();
+        Map<MetaKey, Object> _meta = new HashMap<>();
+        _meta.put(MetaKey.from("timestamp"), 1762860699);
+        _meta.put(MetaKey.from("api.ibmtest.org/location"), "Hursley");
+        _meta.put(MetaKey.from("api.libertytest.org/person"), personInstance);
+        return new ToolResponse(false, List.of(new TextContent(jsonb.toJson(employeeList))), employeeList, _meta);
+
+    }
+
+    @Tool(name = "addPersonToListToolResponseWithMetaRequest", title = "adds person to people list", description = "adds person to people list", structuredContent = true)
+    public @Schema(value = "{ \"$defs\": { \"Address\": { \"type\": \"object\", \"properties\": { \"number\": { \"type\": \"integer\" }, \"street\": { \"description\": \"A street object to represent complex streets\", \"type\": \"object\", \"properties\": { \"streetName\": { \"type\": \"string\" }, \"roadType\": { \"type\": \"string\" } }, \"required\": [ \"streetName\" ] }, \"postcode\": { \"type\": \"string\" } }, \"required\": [ \"number\", \"street\", \"postcode\" ] }, \"Person\": { \"description\": \"A person object contains address, company objects\", \"type\": \"object\", \"properties\": { \"address\": { \"$ref\": \"#/$defs/Address\" }, \"company\": { \"type\": \"object\", \"properties\": { \"address\": { \"$ref\": \"#/$defs/Address\" }, \"name\": { \"type\": \"string\" }, \"shareholders\": { \"description\": \"A list of shareholder (person object)\", \"type\": \"array\", \"items\": { \"$ref\": \"#/$defs/Person\" } }, \"shareholderRegistry\": { \"type\": \"object\", \"properties\": { \"value\": { \"$ref\": \"#/$defs/person\" }, \"key\": { \"type\": \"integer\" } }, \"required\": [] } }, \"required\": [ \"name\", \"address\", \"shareholders\" ] }, \"fullname\": { \"type\": \"string\" } }, \"required\": [ \"fullname\", \"address\", \"company\" ] } }, \"type\": \"array\", \"items\": { \"$ref\": \"#/$defs/Person\" }, \"description\": \"Returns list of person object\" }",
+                   description = "Returns list of person object") ToolResponse addPersonToListToolResponseWithMetaRequest(@ToolArg(name = "employeeList",
+                                                                                                                                   description = "List of people") List<Person> employeeList,
+                                                                                                                          @ToolArg(name = "person",
+                                                                                                                                   description = "Person object") Optional<Person> person,
+                                                                                                                          Meta meta) {
+        Person personInstance = person.get();
+        employeeList.add(personInstance);
+        Jsonb jsonb = JsonbBuilder.create();
+        JsonObject jo = meta.asJsonObject();
+
+        Map<MetaKey, Object> _meta = new HashMap<>();
+        jo.forEach((key, value) -> {
+            MetaKey metaKey = MetaKey.from(key);
+            meta.getValue(metaKey);
+            _meta.put(metaKey, value);
+        });
+        return new ToolResponse(false, List.of(new TextContent(jsonb.toJson(employeeList))), employeeList, _meta);
+    }
+
+    @Tool(name = "simpleMetaRequest", title = "return string made from args and metadata", description = "return string made from args and metadata", structuredContent = false)
+    public String simpleMetaRequest(@ToolArg(name = "name", description = "name of person") String name,
+                                    Meta meta) {
+        Jsonb jsonb = JsonbBuilder.create();
+
+        String location = (String) meta.getValue(MetaKey.from("api.ibmtest.org/location"));
+        BigDecimal timestamp = (BigDecimal) meta.getValue(MetaKey.from("timestamp"));
+        String result = "Hello " + name + " you have called this tool from " + location + " at timestamp " + timestamp.toString();
+        return result;
+    }
+
+    @Tool(name = "get-user-jp",
+          title = "ユーザー情報取得", // Retrieve user information
+          description = "指定されたユーザー ID の名前とロールを取得します。") // Retrieve the name and role of the specified user ID
+    public String getUserJp(@ToolArg(name = "userid",
+                                     description = "対象ユーザーのユーザーID。") String userId) { // The user ID of the target user
+        return "ID: " + userId + ", Name: 仮名, role: user";
+    }
+
+    @Tool(name = "noArgsRequest", title = "call tool without propviding arguments in params", description = "return string made from args and metadata", structuredContent = false)
+    public String noArgsRequest(Meta meta) {
+        Jsonb jsonb = JsonbBuilder.create();
+
+        String location = (String) meta.getValue(MetaKey.from("api.ibmtest.org/location"));
+        BigDecimal timestamp = (BigDecimal) meta.getValue(MetaKey.from("timestamp"));
+        String result = "You have called this tool from " + location + " at timestamp " + timestamp.toString();
+        return result;
+    }
+
 }

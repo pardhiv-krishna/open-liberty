@@ -13,8 +13,13 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ibm.websphere.ras.Tr;
+import com.ibm.websphere.ras.TraceComponent;
+
 import io.openliberty.mcp.internal.RequestMethod;
+import io.openliberty.mcp.internal.exceptions.jsonrpc.JSONRPCException;
 import io.openliberty.mcp.internal.exceptions.jsonrpc.MCPRequestValidationException;
+import io.openliberty.mcp.request.RequestId;
 import jakarta.json.Json;
 import jakarta.json.JsonException;
 import jakarta.json.JsonNumber;
@@ -22,35 +27,60 @@ import jakarta.json.JsonObject;
 import jakarta.json.JsonString;
 import jakarta.json.JsonValue;
 import jakarta.json.bind.Jsonb;
+import jakarta.json.bind.annotation.JsonbTransient;
 
+/**
+ * A JSON-RPC 2.0 request or notification.
+ * <p>
+ * Create and validate by calling {@link #createValidMCPRequest(Reader)}
+ *
+ * @param jsonrpc the JSON-RPC version (must be 2.0)
+ * @param id the request ID
+ * @param method the method name
+ * @param params the method parameters parsed as JSON
+ */
 public record McpRequest(String jsonrpc,
-                         McpRequestId id,
+                         RequestId id,
                          String method,
                          JsonObject params) {
 
-//    Returns the enum value of the supported tool methods
+    private static final TraceComponent tc = Tr.register(McpRequest.class);
+
     /**
-     * Converts the string value of the method from an MCP request into a matching enum value
+     * Gets the request method as a {@link RequestMethod}.
      *
      * @return the matching {@link RequestMethod} enum value
+     * @throws JSONRPCException if the method does not map to a {@code RequestMethod} value
      */
+    @JsonbTransient
     public RequestMethod getRequestMethod() {
         return RequestMethod.getForMethodName(this.method);
     }
 
     /**
-     * Deserialises the MCP request params value from JSON into an object of the specified type
+     * Deserializes the MCP request params value from JSON into an object of the specified type
      *
      * @param <T> the target type to map the JSON into
-     * @param type the class we want to deserialise the JSON into
-     * @param jsonb the jsonb deserialiser to convert the JSON string into an object
-     * @return
+     * @param type the class we want to deserialize the JSON into
+     * @param jsonb the jsonb deserializer to convert the JSON string into an object
+     * @return the method parameters converted to {@code type}
      */
     public <T> T getParams(Class<T> type, Jsonb jsonb) {
         String json = jsonb.toJson(this.params);
         return jsonb.fromJson(json, type);
     }
 
+    /**
+     * Parse and validate an MCP Request
+     * <p>
+     * Validates that the data is JSON and is a valid JSON-RPC 2.0 request or notification
+     *
+     * @param reader the reader to read the request from
+     * @return the parsed MCP Request
+     *
+     * @throws JsonException if the request is not valid JSON
+     * @throws MCPRequestValidationException if the request is otherwise invalid
+     */
     public static McpRequest createValidMCPRequest(Reader reader) throws JsonException, MCPRequestValidationException {
 
         JsonObject requestJson = Json.createReader(reader).readObject();
@@ -72,7 +102,7 @@ public record McpRequest(String jsonrpc,
             return createMCPNotificationRequest(jsonRpc, method, params);
         }
 
-        McpRequestId idObj = parseAndValidateId(id, errors);
+        RequestId idObj = parseAndValidateId(id, errors);
 
         if (!errors.isEmpty()) {
             throw new MCPRequestValidationException(errors);
@@ -88,29 +118,29 @@ public record McpRequest(String jsonrpc,
 
     private static void validateJsonRpc(String jsonRpc, List<String> errors) {
         if (!"2.0".equals(jsonRpc)) {
-            errors.add("jsonrpc field must be present. Only JSONRPC 2.0 is currently supported");
+            errors.add(Tr.formatMessage(tc, "jsonrpc.exception.validation.invalid.version", jsonRpc));
         }
     }
 
     private static void validateMethod(String method, List<String> errors) {
         if (method == null || method.isBlank()) {
-            errors.add("method must be present and not empty");
+            errors.add(Tr.formatMessage(tc, "jsonrpc.validation.empty.method"));
         }
     }
 
-    private static McpRequestId parseAndValidateId(JsonValue id, List<String> errors) {
+    private static RequestId parseAndValidateId(JsonValue id, List<String> errors) {
         return switch (id.getValueType()) {
-            case NUMBER -> new McpRequestId(((JsonNumber) id).bigDecimalValue());
+            case NUMBER -> new RequestId(((JsonNumber) id).bigDecimalValue());
             case STRING -> {
                 String idString = ((JsonString) id).getString();
                 if (idString.isBlank()) {
-                    errors.add("id must not be empty");
+                    errors.add(Tr.formatMessage(tc, "jsonrpc.exception.validation.empty.string.id", idString));
                     yield null;
                 }
-                yield new McpRequestId(idString);
+                yield new RequestId(idString);
             }
             default -> {
-                errors.add("id must be a string or number");
+                errors.add(Tr.formatMessage(tc, "jsonrpc.exception.validation.invalid.id.type"));
                 yield null;
             }
         };

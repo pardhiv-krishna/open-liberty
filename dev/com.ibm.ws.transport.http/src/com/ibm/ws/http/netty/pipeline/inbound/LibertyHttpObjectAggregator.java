@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025 IBM Corporation and others.
+ * Copyright (c) 2025, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -60,12 +60,11 @@ public class LibertyHttpObjectAggregator extends SimpleChannelInboundHandler<Htt
             ctx.channel().attr(COMPOSITE_CONTENT).set(content);
 
             //If POST, check for integer content-length; fail-fast if CL is long which is not supported at this time.
-            String value = request.getMethod().name().equals("POST") ? request.headers().get(io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH) : null ;
+            String value = request.method().name().equals("POST") ? request.headers().get(io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH) : null;
             if (value != null) {
                 try {
                     Integer.parseInt(value);
-                }
-                catch (NumberFormatException e) {
+                } catch (NumberFormatException e) {
                     String longContentLengthNotSupportMsg = "Only POST request with integer content-length is supported at this time.";
                     throw new IllegalArgumentException(longContentLengthNotSupportMsg);
                 }
@@ -78,7 +77,6 @@ public class LibertyHttpObjectAggregator extends SimpleChannelInboundHandler<Htt
 
                 if (sizeOfCurrentChunk > maxContentLength ||
                     (content.readableBytes() + sizeOfCurrentChunk) > maxContentLength) {
-                    ReferenceCountUtil.release(msg);
                     throw new TooLongFrameException("Content length exceeded max of " + maxContentLength + " bytes.");
                 }
 

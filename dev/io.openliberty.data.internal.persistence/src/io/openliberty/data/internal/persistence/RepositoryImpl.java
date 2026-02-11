@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022,2025 IBM Corporation and others.
+ * Copyright (c) 2022,2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -292,13 +292,18 @@ public class RepositoryImpl<R> implements InvocationHandler {
                 if (trace && tc.isDebugEnabled())
                     Tr.debug(tc, "checking " + cause.getClass().getName() + " with message " + cause.getMessage());
 
-                if (cause instanceof SQLException c &&
-                    emb.isConnectionError(c))
-                    x = new DataConnectionException(original);
+                String sqlState = null;
+                if (cause instanceof SQLException c) {
+                    sqlState = c.getSQLState();
+                    if (emb.isConnectionError(c))
+                        x = new DataConnectionException(original);
+                }
                 if (x == null)
                     if (cause instanceof SQLSyntaxErrorException)
                         x = new MappingException(original);
-                    else if (cause instanceof SQLIntegrityConstraintViolationException)
+                    else if (cause instanceof SQLIntegrityConstraintViolationException ||
+                    // workaround for PostgreSQL (23505) & Microsoft SQL Server (23000)
+                             sqlState != null && sqlState.startsWith("23"))
                         x = new EntityExistsException(original);
             }
             if (x == null) {
@@ -535,18 +540,24 @@ public class RepositoryImpl<R> implements InvocationHandler {
                 if (queryInfo.validateParams)
                     validator.validateParameters(proxy, method, args);
 
+                int txStatus = provider.tranMgr.getStatus();
                 if ((queryType = queryInfo.type).requiresTransaction &&
-                    Status.STATUS_NO_TRANSACTION == provider.tranMgr.getStatus()) {
+                    txStatus == Status.STATUS_NO_TRANSACTION) {
                     suspendedLTC = provider.localTranCurrent.suspend();
                     provider.tranMgr.begin();
                     startedTransaction = true;
+                    if (trace && tc.isDebugEnabled())
+                        Tr.debug(this, tc, "started global tran",
+                                 "suspended LTC: " + suspendedLTC);
+                } else if (trace && tc.isDebugEnabled()) {
+                    Tr.debug(this, tc, Util.txStatusToString(txStatus));
                 }
 
                 if (queryType != RESOURCE_ACCESS)
                     em = entityInfo.builder.createEntityManager();
 
                 returnValue = switch (queryType) {
-                    case FIND, FIND_AND_DELETE -> queryInfo.find(em, args);
+                    case FIND, FIND_AND_DELETE -> queryInfo.find(em, txStatus, args);
                     case COUNT -> queryInfo.count(em, args);
                     case EXISTS -> queryInfo.exists(em, args);
                     case INSERT -> queryInfo.insert(args[0], em);
@@ -554,7 +565,7 @@ public class RepositoryImpl<R> implements InvocationHandler {
                     case QM_UPDATE, QM_DELETE -> queryInfo.execute(em, args);
                     case LC_DELETE -> queryInfo.delete(args[0], em);
                     case LC_UPDATE -> queryInfo.update(args[0], em);
-                    case LC_UPDATE_RET_ENTITY -> queryInfo.findAndUpdate(args[0], em);
+                    case LC_UPDATE_MERGE -> queryInfo.findAndUpdate(args[0], em);
                     case RESOURCE_ACCESS -> getResource(method);
                 };
 
@@ -563,28 +574,61 @@ public class RepositoryImpl<R> implements InvocationHandler {
 
                 failed = false;
             } finally {
-                if (em != null)
-                    em.close();
-
                 try {
                     if (startedTransaction) {
                         int status = provider.tranMgr.getStatus();
-                        if (status == Status.STATUS_MARKED_ROLLBACK || failed)
+                        if (status == Status.STATUS_MARKED_ROLLBACK || failed) {
+                            if (trace && tc.isDebugEnabled())
+                                Tr.debug(this, tc, "roll back global tran",
+                                         Util.txStatusToString(status));
                             provider.tranMgr.rollback();
-                        else if (status != Status.STATUS_NO_TRANSACTION)
+                        } else if (status != Status.STATUS_NO_TRANSACTION) {
+                            if (trace && tc.isDebugEnabled())
+                                Tr.debug(this, tc, "commit global tran",
+                                         Util.txStatusToString(status));
                             provider.tranMgr.commit();
+                        }
                     } else {
-                        if (failed && Status.STATUS_ACTIVE == provider.tranMgr.getStatus())
-                            provider.tranMgr.setRollbackOnly();
+                        if (Status.STATUS_ACTIVE == provider.tranMgr.getStatus()) {
+                            if (failed) {
+                                if (trace && tc.isDebugEnabled())
+                                    Tr.debug(this, tc, "set rollback only");
+                                provider.tranMgr.setRollbackOnly();
+                            } else if (em != null && queryType.detachEntities) {
+                                // flush changes first because detach interferes with updates
+                                if (trace && tc.isDebugEnabled())
+                                    Tr.debug(this, tc, "flush");
+                                em.flush();
+                                // TODO 1.1 only detach if a stateless repository
+                                if (entityInfo != null) {
+                                    if (trace && tc.isDebugEnabled())
+                                        Tr.debug(this, tc, "clear");
+                                    em.clear();
+                                }
+                            }
+                        } else if (em != null && queryType.detachEntities) {
+                            // TODO 1.1 only detach if a stateless repository
+                            if (trace && tc.isDebugEnabled())
+                                Tr.debug(this, tc, "clear");
+                            em.clear();
+                        }
                     }
                 } finally {
-                    if (suspendedLTC != null)
-                        provider.localTranCurrent.resume(suspendedLTC);
+                    try {
+                        if (suspendedLTC != null) {
+                            if (trace && tc.isDebugEnabled())
+                                Tr.debug(this, tc, "resume LTC: " + suspendedLTC);
+                            provider.localTranCurrent.resume(suspendedLTC);
+                        }
+                    } finally {
+                        if (em != null)
+                            em.close();
+                    }
                 }
             }
 
             if (trace && tc.isEntryEnabled()) {
-                Object valueToLog = queryType.hideReturnValue //
+                Object valueToLog = queryType == null || queryType.hideReturnValue //
                                 ? provider.loggable(repositoryInterface, method, returnValue) //
                                 : returnValue;
                 Tr.exit(this, tc, "invoke " + repositoryInterface.getSimpleName() +

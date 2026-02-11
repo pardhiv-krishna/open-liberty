@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2022,2025 IBM Corporation and others.
+ * Copyright (c) 2022,2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -61,7 +61,8 @@ public interface Orders extends CrudRepository<PurchaseOrder, UUID> {
     @OrderBy("id")
     Optional<PurchaseOrder> findFirstByPurchasedBy(String purchaser);
 
-    List<Float> findTotalByPurchasedByIn(Iterable<String> purchasers, Sort<?>... sorts);
+    List<PurchaseOrder> findOrdersByPurchasedByIn(Iterable<String> purchasers,
+                                                  Sort<?>... sorts);
 
     @Update
     void modify(PurchaseOrder order);
@@ -82,11 +83,11 @@ public interface Orders extends CrudRepository<PurchaseOrder, UUID> {
     @OrderBy("total")
     List<Float> purchaseTotalsFor(String purchaser);
 
-    @Query("SELECT VERSION(THIS)")
+    @Query("SELECT VERSION(this)")
     @OrderBy("version(this)")
     List<Integer> versionsAsc();
 
-    @Query("SELECT VERSION(THIS)")
+    @Query("SELECT VERSION(this)")
     @OrderBy(value = "versionNum", descending = true)
     List<Integer> versionsDesc();
 }

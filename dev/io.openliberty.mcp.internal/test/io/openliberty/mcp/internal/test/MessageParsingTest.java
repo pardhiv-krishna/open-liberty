@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2025 IBM Corporation and others.
+ * Copyright (c) 2025, 2026 IBM Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -10,12 +10,13 @@
 package io.openliberty.mcp.internal.test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.arrayContaining;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertEquals;
 
 import java.io.StringReader;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.BeforeClass;
@@ -28,17 +29,20 @@ import io.openliberty.mcp.internal.Capabilities.Roots;
 import io.openliberty.mcp.internal.Capabilities.Sampling;
 import io.openliberty.mcp.internal.Literals;
 import io.openliberty.mcp.internal.RequestMethod;
-import io.openliberty.mcp.internal.ToolMetadata.ArgumentMetadata;
 import io.openliberty.mcp.internal.ToolRegistry;
 import io.openliberty.mcp.internal.exceptions.jsonrpc.JSONRPCException;
 import io.openliberty.mcp.internal.requests.McpInitializeParams;
 import io.openliberty.mcp.internal.requests.McpInitializeParams.ClientInfo;
 import io.openliberty.mcp.internal.requests.McpNotificationParams;
 import io.openliberty.mcp.internal.requests.McpRequest;
+import io.openliberty.mcp.internal.requests.McpRequestIdDeserializer;
+import io.openliberty.mcp.internal.requests.McpRequestIdSerializer;
 import io.openliberty.mcp.internal.requests.McpToolCallParams;
+import io.openliberty.mcp.internal.tools.ToolManager.ToolArgument;
 import jakarta.json.JsonException;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
+import jakarta.json.bind.JsonbConfig;
 import jakarta.json.bind.JsonbException;
 
 /**
@@ -49,21 +53,23 @@ public class MessageParsingTest {
 
     @BeforeClass
     public static void setup() {
-        jsonb = JsonbBuilder.create();
+        JsonbConfig jsonbConfig = new JsonbConfig().withSerializers(new McpRequestIdSerializer())
+                                                   .withDeserializers(new McpRequestIdDeserializer());
+        jsonb = JsonbBuilder.create(jsonbConfig);
         ToolRegistry registry = new ToolRegistry();
         ToolRegistry.set(registry);
 
         Tool testTool = Literals.tool("echo", "Echo", "Echos the input");
-        Map<String, ArgumentMetadata> arguments = Map.of("input", new ArgumentMetadata(String.class, 0, "", true, false));
+        List<ToolArgument> arguments = List.of(new ToolArgument("input", "", true, String.class, ""));
         registry.addTool(ToolMetadataTestUtility.createFrom(testTool, arguments, Collections.emptyList()));
 
         Tool addTestTool = Literals.tool("add", "Add", "Addition calculator");
-        Map<String, ArgumentMetadata> additionArgs = Map.of("num1", new ArgumentMetadata(Integer.class, 0, "", true, false),
-                                                            "num2", new ArgumentMetadata(Integer.class, 1, "", true, false));
+        List<ToolArgument> additionArgs = List.of(new ToolArgument("num1", "", true, Integer.class, ""),
+                                                  new ToolArgument("num2", "", true, Integer.class, ""));
         registry.addTool(ToolMetadataTestUtility.createFrom(addTestTool, additionArgs, Collections.emptyList()));
 
         Tool toogleTestTool = Literals.tool("toggle", "Toggle", "Toggle a boolean");
-        Map<String, ArgumentMetadata> booleanArgs = Map.of("input", new ArgumentMetadata(Boolean.class, 0, "boolean value", true, false));
+        List<ToolArgument> booleanArgs = List.of(new ToolArgument("input", "boolean value", true, Boolean.class, ""));
         registry.addTool(ToolMetadataTestUtility.createFrom(toogleTestTool, booleanArgs, Collections.emptyList()));
     }
 
@@ -83,11 +89,10 @@ public class MessageParsingTest {
                         }
                         """);
         McpRequest request = jsonb.fromJson(reader, McpRequest.class);
-        assertThat(request.id().getNumVal(), equalTo(new BigDecimal(2)));
-        assertThat(request.id().getStrVal(), equalTo(null));
+        assertThat(request.id().value(), equalTo(new BigDecimal(2)));
         assertThat(request.getRequestMethod(), equalTo(RequestMethod.TOOLS_CALL));
         McpToolCallParams toolCallRequest = request.getParams(McpToolCallParams.class, jsonb);
-        assertThat(toolCallRequest.getArguments(jsonb), arrayContaining("Hello"));
+        assertEquals(Map.of("input", "Hello"), toolCallRequest.getArguments(jsonb));
     }
 
     @Test
@@ -106,8 +111,7 @@ public class MessageParsingTest {
                         }
                         """);
         McpRequest request = jsonb.fromJson(reader, McpRequest.class);
-        assertThat(request.id().getStrVal(), equalTo("2"));
-        assertThat(request.id().getNumVal(), equalTo(null));
+        assertThat(request.id().value(), equalTo("2"));
     }
 
     @Test(expected = JSONRPCException.class)
@@ -249,7 +253,7 @@ public class MessageParsingTest {
                         """);
 
         McpRequest request = jsonb.fromJson(reader, McpRequest.class);
-        assertThat(request.id().getStrVal(), equalTo("1"));
+        assertThat(request.id().value(), equalTo("1"));
         assertThat(request.getRequestMethod(), equalTo(RequestMethod.INITIALIZE));
         McpInitializeParams params = request.getParams(McpInitializeParams.class, jsonb);
         assertThat(params.getProtocolVersion(), equalTo("2024-11-05"));
@@ -293,7 +297,7 @@ public class MessageParsingTest {
         assertThat(request.getRequestMethod(), equalTo(RequestMethod.CANCELLED));
 
         McpNotificationParams notificationRequest = request.getParams(McpNotificationParams.class, jsonb);
-        assertThat(notificationRequest.getRequestId().getStrVal(), equalTo("123"));
+        assertThat(notificationRequest.getRequestId().value(), equalTo("123"));
         assertThat(notificationRequest.getReason(), equalTo("User requested cancellation"));
     }
 
@@ -313,7 +317,7 @@ public class MessageParsingTest {
         assertThat(request.getRequestMethod(), equalTo(RequestMethod.CANCELLED));
 
         McpNotificationParams notificationRequest = request.getParams(McpNotificationParams.class, jsonb);
-        assertThat(notificationRequest.getRequestId().getNumVal(), equalTo(new BigDecimal(5)));
+        assertThat(notificationRequest.getRequestId().value(), equalTo(new BigDecimal(5)));
         assertThat(notificationRequest.getReason(), equalTo("User requested cancellation"));
     }
 
@@ -335,7 +339,8 @@ public class MessageParsingTest {
                         """);
         McpRequest request = jsonb.fromJson(reader, McpRequest.class);
         McpToolCallParams toolCallRequest = request.getParams(McpToolCallParams.class, jsonb);
-        assertThat(toolCallRequest.getArguments(jsonb), arrayContaining(111, 222));
+
+        assertEquals(Map.of("num1", 111, "num2", 222), toolCallRequest.getArguments(jsonb));
     }
 
     @Test
@@ -355,7 +360,7 @@ public class MessageParsingTest {
                         """);
         McpRequest request = jsonb.fromJson(reader, McpRequest.class);
         McpToolCallParams toolCallRequest = request.getParams(McpToolCallParams.class, jsonb);
-        assertThat(toolCallRequest.getArguments(jsonb), arrayContaining(true));
+        assertEquals(Map.of("input", true), toolCallRequest.getArguments(jsonb));
     }
 
 }

@@ -53,6 +53,7 @@ import jakarta.data.repository.Insert;
 import jakarta.data.repository.Save;
 import jakarta.data.repository.Update;
 import jakarta.persistence.AttributeConverter;
+import jakarta.transaction.Status;
 
 /**
  * A location for helper methods that do not require any state.
@@ -77,6 +78,11 @@ public class Util {
                     List.of(Insert.class.getSimpleName(),
                             Save.class.getSimpleName(),
                             Update.class.getSimpleName());
+
+    /**
+     * Query hint and map key for a load graph.
+     */
+    static final String LOADGRAPH = "jakarta.persistence.loadgraph";
 
     /**
      * List of valid prefixes for Query by Method Name methods of a stateful
@@ -128,6 +134,7 @@ public class Util {
         QL_KEYWORDS_AFTER_ENTITY_NAME.add("HAVING");
         QL_KEYWORDS_AFTER_ENTITY_NAME.add("INTERSECT");
         QL_KEYWORDS_AFTER_ENTITY_NAME.add("ORDER");
+        QL_KEYWORDS_AFTER_ENTITY_NAME.add("SELECT");
         QL_KEYWORDS_AFTER_ENTITY_NAME.add("SET");
         QL_KEYWORDS_AFTER_ENTITY_NAME.add("UNION");
         QL_KEYWORDS_AFTER_ENTITY_NAME.add("WHERE");
@@ -301,6 +308,26 @@ public class Util {
         for (Annotation anno : method.getAnnotations())
             if (statefulAnnos.contains(anno.annotationType()) ||
                 statelessAnnos.contains(anno.annotationType()))
+                return true;
+
+        return false;
+    }
+
+    /**
+     * Identifies if the given object is an instance of any of the given classes.
+     *
+     * @param classes set of classes that the object might be an instance of.
+     * @param object  object that might be an instance of one of the classes.
+     * @return true if the object is an instance of any of the classes.
+     *         Otherwise false.
+     */
+    @Trivial
+    static final boolean isInstanceOfAny(Set<Class<?>> classes, Object object) {
+        if (object == null)
+            return false;
+
+        for (Class<?> type : classes)
+            if (type.isInstance(object))
                 return true;
 
         return false;
@@ -654,6 +681,29 @@ public class Util {
             }
             b.append(EOLN);
         }
+    }
+
+    /**
+     * Readable value to log to trace for a transaction status constant.
+     *
+     * @param status constant value from jakarta.transaction.Status.
+     * @return a more readable value to log to trace.
+     */
+    @Trivial
+    static final String txStatusToString(int status) {
+        return switch (status) {
+            case Status.STATUS_ACTIVE -> "STATUS_ACTIVE (0)";
+            case Status.STATUS_MARKED_ROLLBACK -> "STATUS_MARKED_ROLLBACK (1)";
+            case Status.STATUS_PREPARED -> "STATUS_PREPARED (2)";
+            case Status.STATUS_COMMITTED -> "STATUS_COMMITTED (3)";
+            case Status.STATUS_ROLLEDBACK -> "STATUS_ROLLEDBACK (4)";
+            case Status.STATUS_UNKNOWN -> "STATUS_UNKNOWN (5)";
+            case Status.STATUS_NO_TRANSACTION -> "STATUS_NO_TRANSACTION (6)";
+            case Status.STATUS_PREPARING -> "STATUS_PREPARING (7)";
+            case Status.STATUS_COMMITTING -> "STATUS_COMMITTING (8)";
+            case Status.STATUS_ROLLING_BACK -> "STATUS_ROLLING_BACK (9)";
+            default -> "unrecognized value (" + status + ")";
+        };
     }
 
     /**
