@@ -236,6 +236,7 @@ public class Persistence {
                                       "excludeUnlistedClasses",
                                       "sharedCacheMode",
                                       "validationMode",
+                                      "defaultToOneFetchType",
                                       "properties"
     })
     public static class PersistenceUnit {
